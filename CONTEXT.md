@@ -56,10 +56,16 @@ version while the new service worker installs; the second gets the new build.
 
 ## Decisions worth keeping
 
-- **Every puzzle is verified to have exactly one solution** before it is dealt,
-  by exhaustive solution counting, not a heuristic. Boards are always solvable
-  by deduction and never by guessing. Generating one takes well under a
-  millisecond, so there is no reason to weaken this.
+- **Every puzzle is verified solvable without guessing** before it is dealt
+  (`isSolvableByLogic`): a line-by-line solver settles each cell that every
+  fitting placement of a row/column clue agrees on, and repeats until the board
+  is full. Only checking for one solution (`hasUniqueSolution`) used to deal
+  about 1 in 90 boards that stall partway, usually ones full of 1s. Logic-solvable
+  implies unique (checked on 146k random grids). Generating one takes ~0.01 ms.
+- **Taps ignore Safari's emulated mouse events** (`Board.tsx`). After a tap,
+  Safari fires a fake mousedown. React Native Web drops it unless the finger
+  wobbled (any touchmove), and then that mousedown re-toggled the cell: a 1-2
+  frame "ghost". A mousedown within 1 s of a touch is now ignored.
 - **The grid is centred by flanking it with an equal spacer** opposite the clue
   gutter. This costs cell size (44px at 375pt wide) and that trade was made
   deliberately.

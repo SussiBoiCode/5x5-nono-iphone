@@ -93,12 +93,13 @@ the page but silently refuses to install it, so it will not work offline;
 
 ### Puzzle generation
 
-Every puzzle is checked to have **exactly one solution** before it is dealt, so
-a board is always solvable by deduction and never by guessing. The check is
-exhaustive rather than heuristic: `countSolutions` enumerates the legal
-placements for each row, then walks the rows one at a time, filtering the
-surviving column placements at each step and stopping as soon as it finds a
-second solution. Generating a unique 5x5 takes well under a millisecond.
+Every puzzle is checked to be **solvable without guessing** before it is
+dealt. `isSolvableByLogic` solves it the way a person does: for each row and
+column it lists every placement of the clue that fits the cells already
+settled, settles any cell they all agree on, and repeats until the board is
+full. Having exactly one solution is not enough on its own: some unique boards
+(often ones full of 1s) stall partway and need a guess. A board this solver
+finishes always has exactly one solution. Generating one takes about 0.01 ms.
 
 ## Development
 

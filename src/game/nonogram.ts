@@ -115,6 +115,75 @@ export function hasUniqueSolution(rowClues: Clue[], colClues: Clue[]): boolean {
   return countSolutions(rowClues, colClues, 2) === 1;
 }
 
+/**
+ * Solves the puzzle the way a person does: one row or column at a time, a
+ * cell is settled when every placement of that line's clue that fits the
+ * cells already settled agrees on it. Repeats until nothing changes.
+ *
+ * Returns true only if that alone fills the whole board. A unique solution is
+ * not enough: some unique boards (often ones full of 1s) stall partway and
+ * can only be finished by guessing. Every deduction here is forced, so a
+ * board this solves also has exactly one solution.
+ */
+export function isSolvableByLogic(rowClues: Clue[], colClues: Clue[]): boolean {
+  const full = (1 << SIZE) - 1;
+  // Per row: bitmasks of cells known filled and known empty.
+  const filled = new Array<number>(SIZE).fill(0);
+  const empty = new Array<number>(SIZE).fill(0);
+  const rowPatterns = rowClues.map((clue) => patternsForClue(clue));
+  const colPatterns = colClues.map((clue) => patternsForClue(clue));
+
+  const colMasks = (c: number) => {
+    let f = 0;
+    let e = 0;
+    for (let r = 0; r < SIZE; r++) {
+      if ((filled[r] >> c) & 1) f |= 1 << r;
+      if ((empty[r] >> c) & 1) e |= 1 << r;
+    }
+    return { f, e };
+  };
+
+  /** Cells every fitting pattern agrees on, or null if none fits. */
+  const settle = (patterns: number[], f: number, e: number) => {
+    let allFilled = full;
+    let allEmpty = full;
+    let any = false;
+    for (const p of patterns) {
+      if ((p & e) !== 0 || (p & f) !== f) continue;
+      any = true;
+      allFilled &= p;
+      allEmpty &= ~p & full;
+    }
+    return any ? { f: allFilled, e: allEmpty } : null;
+  };
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let r = 0; r < SIZE; r++) {
+      const next = settle(rowPatterns[r], filled[r], empty[r]);
+      if (!next) return false;
+      if (next.f !== filled[r] || next.e !== empty[r]) {
+        filled[r] = next.f;
+        empty[r] = next.e;
+        changed = true;
+      }
+    }
+    for (let c = 0; c < SIZE; c++) {
+      const known = colMasks(c);
+      const next = settle(colPatterns[c], known.f, known.e);
+      if (!next) return false;
+      if (next.f === known.f && next.e === known.e) continue;
+      for (let r = 0; r < SIZE; r++) {
+        if ((next.f >> r) & 1) filled[r] |= 1 << c;
+        if ((next.e >> r) & 1) empty[r] |= 1 << c;
+      }
+      changed = true;
+    }
+  }
+  return filled.every((f, r) => (f | empty[r]) === full);
+}
+
 function randomGrid(density: number): Grid {
   const grid: Grid = [];
   for (let r = 0; r < SIZE; r++) {
@@ -138,14 +207,17 @@ function isWellFormed(grid: Grid): boolean {
   return true;
 }
 
-/** Generates a random 5x5 puzzle that has exactly one solution. */
+/**
+ * Generates a random 5x5 puzzle that can be solved start to finish without
+ * guessing (which also means it has exactly one solution).
+ */
 export function generatePuzzle(): Puzzle {
   for (let attempt = 0; attempt < 500; attempt++) {
     const density = 0.42 + Math.random() * 0.22;
     const solution = randomGrid(density);
     if (!isWellFormed(solution)) continue;
     const { rowClues, colClues } = cluesForGrid(solution);
-    if (!hasUniqueSolution(rowClues, colClues)) continue;
+    if (!isSolvableByLogic(rowClues, colClues)) continue;
     return { solution, rowClues, colClues };
   }
   // Statistically unreachable, but never hand back a broken board.

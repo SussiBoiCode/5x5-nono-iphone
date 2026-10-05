@@ -7,6 +7,19 @@ import type { Theme } from "../theme";
 /** Grid border (2) + inner padding (2) on each side. */
 const GRID_INSET = 4;
 
+/**
+ * After a tap, Safari fires emulated mousedown/mouseup events. React Native Web
+ * filters those out, but stops filtering as soon as it sees a touchmove, and
+ * Safari still emulates the mouse when the finger wobbled a pixel. That stray
+ * mousedown re-toggled the cell straight back: a 1-2 frame "ghost". On web a
+ * mouse press this soon after a touch is always emulated, so it is ignored.
+ */
+const EMULATED_MOUSE_WINDOW_MS = 1000;
+
+/** DOM event type on web ("touchstart", "mousedown", ...); undefined on native. */
+const eventType = (event: GestureResponderEvent): string | undefined =>
+  (event.nativeEvent as { type?: string }).type;
+
 type Props = {
   cells: CellState[][];
   rowClues: Clue[];
@@ -41,6 +54,11 @@ export default function Board({
   const origin = useRef({ x: 0, y: 0 });
   const paintValue = useRef<CellState | null>(null);
   const lastCell = useRef<string | null>(null);
+  const lastTouchAt = useRef(-Infinity);
+
+  const noteTouch = (event: GestureResponderEvent) => {
+    if (eventType(event)?.startsWith("touch")) lastTouchAt.current = Date.now();
+  };
 
   const measure = useCallback(() => {
     gridRef.current?.measureInWindow((x, y) => {
@@ -58,6 +76,13 @@ export default function Board({
   };
 
   const onGrant = (event: GestureResponderEvent) => {
+    noteTouch(event);
+    if (
+      eventType(event) === "mousedown" &&
+      Date.now() - lastTouchAt.current < EMULATED_MOUSE_WINDOW_MS
+    ) {
+      return;
+    }
     const hit = cellAt(event);
     if (!hit) return;
     const value = resolvePaintValue(hit.row, hit.col);
@@ -67,6 +92,7 @@ export default function Board({
   };
 
   const onMove = (event: GestureResponderEvent) => {
+    noteTouch(event);
     if (paintValue.current === null) return;
     const hit = cellAt(event);
     if (!hit) return;
@@ -76,7 +102,9 @@ export default function Board({
     onPaintCell(hit.row, hit.col, paintValue.current);
   };
 
-  const endPaint = () => {
+  const endPaint = (event: GestureResponderEvent) => {
+    // The emulated mousedown follows touchend, so the window starts here.
+    noteTouch(event);
     paintValue.current = null;
     lastCell.current = null;
   };
