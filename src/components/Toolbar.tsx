@@ -44,7 +44,7 @@ export function ModeToggle({
       accessibilityRole="switch"
       accessibilityState={{ checked: marking }}
       accessibilityLabel={marking ? "Mark mode" : "Fill mode"}
-      accessibilityHint="Switches between filling cells and marking them"
+      accessibilityHint="Chooses whether a first tap on a blank cell fills it or marks it"
       style={({ pressed }) => [
         styles.track,
         {

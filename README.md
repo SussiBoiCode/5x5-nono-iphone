@@ -69,10 +69,14 @@ the page but silently refuses to install it, so it will not work offline;
   from the knob's position and colour without looking straight at it.
 - Clear and New puzzle sit *above* the switch deliberately: overshooting the
   switch lands on the stats row rather than on a button that wipes the board.
-- In **Fill**, tap a cell to fill it and tap again to clear. Drag to paint a run
-  of cells in one stroke.
-- In **Mark**, tap to put an × on a cell you've deduced is empty. Marks are an
-  aid only — they don't affect whether the puzzle counts as solved.
+- Tapping a cell steps it through a loop. In **Fill** the loop is
+  empty → filled → × → empty; in **Mark** it runs the other way,
+  empty → × → filled → empty. So the switch only decides what the first tap on
+  a blank cell does, and any state is at most two taps away.
+- Drag to paint a run of cells in one stroke: every cell gets the state the
+  first cell stepped to.
+- An × marks a cell you've deduced is empty. Marks are an aid only — they don't
+  affect whether the puzzle counts as solved.
 - A clue turns grey when the filled cells in that row or column match it.
 - The stopwatch counts up, pauses when you background the app, and stops when
   you solve the puzzle. There is no time limit.

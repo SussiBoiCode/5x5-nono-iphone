@@ -163,11 +163,14 @@ export default function App() {
     clearSession();
   }, []);
 
+  // A tap steps the cell through a loop: empty -> filled -> marked -> empty in
+  // Fill mode. Mark mode runs it the other way round (empty -> marked ->
+  // filled), so the switch only decides what a first tap on a blank cell does.
   const resolvePaintValue = useCallback(
     (row: number, col: number): CellState => {
       const current = cells[row][col];
-      if (mode === "fill") return current === 1 ? 0 : 1;
-      return current === 2 ? 0 : 2;
+      const loop: CellState[] = mode === "fill" ? [0, 1, 2] : [0, 2, 1];
+      return loop[(loop.indexOf(current) + 1) % loop.length];
     },
     [cells, mode]
   );
